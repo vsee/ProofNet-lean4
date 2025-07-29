@@ -113,10 +113,11 @@ def main():
                 orig = e['orig_name']
                 # lookup informal tex by the formal file base name
                 tex_text = informal_texts.get(file_key)
+                inf_stmt, inf_proof = None, None
                 if tex_text:
                     inf_stmt, inf_proof = parse_informal_tex(tex_text, orig)
-                else:
-                    inf_stmt = inf_proof = None
+                
+                if not tex_text or inf_stmt is None or inf_proof is None:
                     log_missing.append(e['name'])
                 record = {
                     'name': e['name'],
