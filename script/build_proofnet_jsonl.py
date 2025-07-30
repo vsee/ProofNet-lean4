@@ -75,14 +75,19 @@ def parse_informal_tex(tex_text, orig_name):
     # build title: capitalize first part, join numbers with dots
     parts = orig_name.split('_')
     title = parts[0].capitalize() + ' ' + '.'.join(parts[1:])
-    # extract paragraph
-    pat_stmt = re.compile(rf"\\paragraph\{{\s*{re.escape(title)}\s*\}}(.*?)(?=(\\paragraph|$))", re.DOTALL)
-    m_stmt = pat_stmt.search(tex_text)
-    informal_stmt = m_stmt.group(1).strip() if m_stmt else None
-    # extract proof environment
-    pat_proof = re.compile(r"\\begin\{proof\}(.*?)\\end\{proof\}", re.DOTALL)
-    m_proof = pat_proof.search(tex_text)
-    informal_proof = m_proof.group(1).strip().replace('\n', ' ').strip() if m_proof else None
+    pattern = re.compile(
+        rf"\\paragraph\{{\s*{re.escape(title)}\s*\}}\s*(?P<statement>[^\r\n]+)[\r\n]+(?P<proof>.*?)(?=(\\paragraph|$))",
+        re.DOTALL | re.VERBOSE
+    )
+
+    match = pattern.search(tex_text)
+    informal_stmt, informal_proof = None, None
+    if match:
+        informal_stmt = match.group("statement").strip()
+        informal_proof = match.group("proof")
+        if informal_proof:
+            informal_proof = informal_proof.strip()
+
     return informal_stmt, informal_proof
 
 
@@ -113,10 +118,11 @@ def main():
                 orig = e['orig_name']
                 # lookup informal tex by the formal file base name
                 tex_text = informal_texts.get(file_key)
+                inf_stmt, inf_proof = None, None
                 if tex_text:
                     inf_stmt, inf_proof = parse_informal_tex(tex_text, orig)
-                else:
-                    inf_stmt = inf_proof = None
+                
+                if not tex_text or inf_stmt is None or inf_proof is None:
                     log_missing.append(e['name'])
                 record = {
                     'name': e['name'],
